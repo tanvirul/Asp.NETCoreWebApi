@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using StudentManagement.Contacts;
 using StudentManagement.Models;
 
 namespace StudentManagement.Controllers
@@ -13,25 +14,26 @@ namespace StudentManagement.Controllers
     [ApiController]
     public class StudentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        //private readonly AppDbContext _context;
+        private readonly IStudentRepository StudentRepository;
 
-        public StudentsController(AppDbContext context)
+        public StudentsController(IStudentRepository studentRepository)
         {
-            _context = context;
+            StudentRepository = studentRepository;
         }
 
         // GET: api/Students
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Student>>> GetStudents()
         {
-            return await _context.Students.ToListAsync();
+            return await StudentRepository.FindAll().Include(x=>x.StudentCourses).ToListAsync();
         }
 
         // GET: api/Students/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Student>> GetStudent(int id)
         {
-            var student = await _context.Students.FindAsync(id);
+            var student = await StudentRepository.FindByCondition(s=>s.Id==id).Include(x=> x.StudentCourses).FirstOrDefaultAsync();
 
             if (student == null)
             {
@@ -50,25 +52,10 @@ namespace StudentManagement.Controllers
             {
                 return BadRequest();
             }
+            Student oldStudent = await StudentRepository.FindByCondition(x => x.Id == id).FirstOrDefaultAsync();
+            oldStudent.Name = student.Name;
 
-            _context.Entry(student).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!StudentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
+            StudentRepository.UpdateStudentName(oldStudent);
             return NoContent();
         }
 
@@ -77,9 +64,7 @@ namespace StudentManagement.Controllers
         [HttpPost]
         public async Task<ActionResult<Student>> PostStudent(Student student)
         {
-            _context.Students.Add(student);
-            await _context.SaveChangesAsync();
-
+            StudentRepository.Create(student);
             return CreatedAtAction("GetStudent", new { id = student.Id }, student);
         }
 
@@ -87,21 +72,15 @@ namespace StudentManagement.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteStudent(int id)
         {
-            var student = await _context.Students.FindAsync(id);
+            var student = await StudentRepository.FindByCondition(x=> x.Id==id).FirstOrDefaultAsync();
             if (student == null)
             {
                 return NotFound();
             }
-
-            _context.Students.Remove(student);
-            await _context.SaveChangesAsync();
-
+            StudentRepository.Delete(student);
+            
             return NoContent();
         }
 
-        private bool StudentExists(int id)
-        {
-            return _context.Students.Any(e => e.Id == id);
-        }
     }
 }
