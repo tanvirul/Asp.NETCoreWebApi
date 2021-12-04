@@ -5,3 +5,8 @@
 /.vs/StudentManagement
 /StudentManagement/bin/*
 /StudentManagement/obj/*
+*.suo
+*.user
+bin
+obj
+packages
