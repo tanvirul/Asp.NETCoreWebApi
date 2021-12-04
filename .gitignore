@@ -3,5 +3,5 @@
 ################################################################################
 
 /.vs/StudentManagement
-/StudentManagement/bin
-/StudentManagement/obj
+/StudentManagement/bin/*
+/StudentManagement/obj/*
